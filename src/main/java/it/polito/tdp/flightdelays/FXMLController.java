@@ -1,8 +1,11 @@
 package it.polito.tdp.flightdelays;
 
 import java.net.URL;
+import java.util.Map;
 import java.util.ResourceBundle;
+import java.util.TreeMap;
 
+import it.polito.tdp.flightdelays.model.Airline;
 import it.polito.tdp.flightdelays.model.Model;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -14,6 +17,7 @@ import javafx.scene.control.TextField;
 public class FXMLController {
 	
 	private Model model;
+	private boolean flag = false;
 
     @FXML
     private ResourceBundle resources;
@@ -25,7 +29,7 @@ public class FXMLController {
     private TextArea txtResult;
 
     @FXML
-    private ComboBox<?> cmbBoxLineaAerea;
+    private ComboBox<Airline> cmbBoxLineaAerea;
 
     @FXML
     private Button caricaVoliBtn;
@@ -38,11 +42,68 @@ public class FXMLController {
 
     @FXML
     void doCaricaVoli(ActionEvent event) {
+    	
+    	Airline air = this.cmbBoxLineaAerea.getValue();
+    	
+    	if(air==null) {
+    		this.txtResult.setText("DEvi selezionare una linea Aerea");
+    		return;
+    	}
+    	
+    	this.model.creaGrafo(air);
+    	this.txtResult.setText("Grafo creato\n#VERTICI: "+this.model.getNumeroVertici()+"\n#ARCHI: "+this.model.getNumeroArchi()+"\n");
+    	
+    	
+    	for(int i = 0; i<10; i++) {
+    		this.txtResult.appendText(this.model.getPeggiori().get(i)+"\n");
+    	}
+    	
+    	this.flag = true;
 
     }
 
     @FXML
     void doSimula(ActionEvent event) {
+    	
+    	if(this.flag == false) {
+    		this.txtResult.appendText("Creare prima il grafo");
+    		return;
+    	}
+    	
+    	int k;
+    	
+    	try {
+    	    		
+    	    k = Integer.parseInt(this.numeroPasseggeriTxtInput.getText());
+    	    	    		
+    	}catch(NumberFormatException ne) {
+    	    this.txtResult.setText("Formato errato di passeggeri\n");
+    	    return;
+    	}
+    	
+    	
+    	int voli;
+    	
+    	try {
+    	    		
+    	  voli = Integer.parseInt(this.numeroVoliTxtInput.getText());
+    	    	    		
+    	}catch(NumberFormatException ne) {
+    	    this.txtResult.setText("Formato numero voli errato\n");
+    	    return;
+    	}
+    	
+    	if(k<=0 || voli<=0) {
+    		this.txtResult.setText("I numeri inseriti devono essere maggiori di zero");
+    		return;
+    	}
+    	
+    	this.txtResult.clear();
+    	Map<Integer,Double> map = new TreeMap<>(this.model.simula(k, voli));
+    	
+    	for(Integer i: map.keySet()) {
+    		this.txtResult.appendText(i+"  ritardo: "+map.get(i)+"\n");
+    	}
 
     }
 
@@ -58,5 +119,6 @@ public class FXMLController {
 
 	public void setModel(Model model) {
 		this.model = model;
+		this.cmbBoxLineaAerea.getItems().addAll(this.model.getAirlines());
 	}
 }

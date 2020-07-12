@@ -4,18 +4,23 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import it.polito.tdp.flightdelays.model.Airline;
 import it.polito.tdp.flightdelays.model.Airport;
+import it.polito.tdp.flightdelays.model.Arco;
 import it.polito.tdp.flightdelays.model.Flight;
 
 public class FlightDelaysDAO {
 
 	public List<Airline> loadAllAirlines() {
-		String sql = "SELECT id, airline from airlines";
+		String sql = "SELECT ID, IATA_CODE, AIRLINE " + 
+				"FROM airlines";
 		List<Airline> result = new ArrayList<Airline>();
 
 		try {
@@ -24,7 +29,7 @@ public class FlightDelaysDAO {
 			ResultSet rs = st.executeQuery();
 
 			while (rs.next()) {
-				result.add(new Airline(rs.getString("ID"), rs.getString("airline")));
+				result.add(new Airline(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRLINE")));
 			}
 
 			conn.close();
@@ -38,7 +43,8 @@ public class FlightDelaysDAO {
 	}
 
 	public List<Airport> loadAllAirports() {
-		String sql = "SELECT id, airport, city, state, country, latitude, longitude FROM airports";
+		String sql = "SELECT ID, IATA_CODE, AIRPORT, CITY, STATE, COUNTRY, LATITUDE, LONGITUDE, TIMEZONE_OFFSET " + 
+				"FROM airports";
 		List<Airport> result = new ArrayList<Airport>();
 		
 		try {
@@ -47,8 +53,8 @@ public class FlightDelaysDAO {
 			ResultSet rs = st.executeQuery();
 
 			while (rs.next()) {
-				Airport airport = new Airport(rs.getString("id"), rs.getString("airport"), rs.getString("city"),
-						rs.getString("state"), rs.getString("country"), rs.getDouble("latitude"), rs.getDouble("longitude"));
+				Airport airport = new Airport(rs.getInt("ID"), rs.getString("IATA_CODE"), rs.getString("AIRPORT"), rs.getString("CITY"),
+						rs.getString("STATE"), rs.getString("COUNTRY"), rs.getDouble("LATITUDE"), rs.getDouble("LONGITUDE"), rs.getDouble("TIMEZONE_OFFSET"));
 				result.add(airport);
 			}
 			
@@ -62,28 +68,75 @@ public class FlightDelaysDAO {
 		}
 	}
 
-	public List<Flight> loadAllFlights() {
-		String sql = "SELECT id, airline, flight_number, origin_airport_id, destination_airport_id, scheduled_dep_date, "
-				+ "arrival_date, departure_delay, arrival_delay, air_time, distance FROM flights";
-		List<Flight> result = new LinkedList<Flight>();
+	public Flight loadAllFlights(Airport a, LocalDateTime li) {
+		String sql = "SELECT ID, AIRLINE_ID, FLIGHT_NUMBER, TAIL_NUMBER, ORIGIN_AIRPORT_ID, DESTINATION_AIRPORT_ID, SCHEDULED_DEPARTURE_DATE, DEPARTURE_DELAY, " + 
+				"ELAPSED_TIME, flights.DISTANCE, ARRIVAL_DATE, ARRIVAL_DELAY " + 
+				"FROM flights " + 
+				"WHERE ORIGIN_AIRPORT_ID = ? AND SCHEDULED_DEPARTURE_DATE > ? " + 
+				"ORDER BY SCHEDULED_DEPARTURE_DATE\n" + 
+				"LIMIT 1";
+		Flight result = null;
 
 		try {
 			Connection conn = DBConnect.getConnection();
 			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, a.getId());
+			Timestamp ts = Timestamp.valueOf(li);
+			st.setTimestamp(2,ts);
 			ResultSet rs = st.executeQuery();
 
-			while (rs.next()) {
-				Flight flight = new Flight(rs.getInt("id"), rs.getString("airline"), rs.getInt("flight_number"),
-						rs.getString("origin_airport_id"), rs.getString("destination_airport_id"),
-						rs.getTimestamp("scheduled_dep_date").toLocalDateTime(),
-						rs.getTimestamp("arrival_date").toLocalDateTime(), rs.getInt("departure_delay"),
-						rs.getInt("arrival_delay"), rs.getInt("air_time"), rs.getInt("distance"));
-				result.add(flight);
+			if (rs.next()) {
+				Flight flight = new Flight(rs.getInt("ID"), rs.getInt("AIRLINE_ID"), rs.getInt("FLIGHT_NUMBER"), rs.getString("TAIL_NUMBER"),
+						rs.getInt("ORIGIN_AIRPORT_ID"), rs.getInt("DESTINATION_AIRPORT_ID"),
+						rs.getTimestamp("SCHEDULED_DEPARTURE_DATE").toLocalDateTime(), rs.getDouble("DEPARTURE_DELAY"), rs.getDouble("ELAPSED_TIME"),
+						 rs.getInt("flights.DISTANCE"),
+						rs.getTimestamp("ARRIVAL_DATE").toLocalDateTime(),
+						rs.getDouble("ARRIVAL_DELAY"));
+				result = flight;
+			}else {
+				return null;
 			}
 
 			conn.close();
 			return result;
 
+		} catch (SQLException e) {
+			e.printStackTrace();
+			System.out.println("Errore connessione al database");
+			throw new RuntimeException("Error Connection Database");
+		}
+	}
+	
+	
+	
+	public List<Arco> loadAllArchi(Airline linea, Map<Integer,Airport> idMap) {
+		String sql = "SELECT ORIGIN_AIRPORT_ID, DESTINATION_AIRPORT_ID, AVG(ARRIVAL_DELAY) as peso " + 
+				"FROM flights " + 
+				"WHERE AIRLINE_ID = ? " + 
+				"GROUP BY ORIGIN_AIRPORT_ID, DESTINATION_AIRPORT_ID";
+		List<Arco> result = new ArrayList<>();
+		
+		try {
+			Connection conn = DBConnect.getConnection();
+			PreparedStatement st = conn.prepareStatement(sql);
+			st.setInt(1, linea.getId());
+			ResultSet rs = st.executeQuery();
+
+			while (rs.next()) {
+				Airport a1 = idMap.get(rs.getInt("ORIGIN_AIRPORT_ID"));
+				Airport a2 = idMap.get(rs.getInt("DESTINATION_AIRPORT_ID"));
+				Double peso = rs.getDouble("peso");
+				
+				if(a1!=null && a2!=null) {
+					result.add(new Arco(a1,a2,peso));
+				}
+				
+				
+			}
+			
+			conn.close();
+			return result;
+			
 		} catch (SQLException e) {
 			e.printStackTrace();
 			System.out.println("Errore connessione al database");

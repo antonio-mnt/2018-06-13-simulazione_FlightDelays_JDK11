@@ -2,39 +2,52 @@ package it.polito.tdp.flightdelays.model;
 
 public class Airport {
 
-	private String id;
-	private String name;
+	private int id;
+	private String code;
+	private String airport;	
 	private String city;
 	private String state;
 	private String country;
 	private double latitude;
 	private double longitude;
+	private double timeZone;
 	
-	public Airport(String id, String name, String city, String state, String country, double latitude,
-			double longitude) {
+	public Airport(int id, String code, String airport, String city, String state, String country, double latitude,
+			double longitude, double timeZone) {
+		super();
 		this.id = id;
-		this.name = name;
+		this.code = code;
+		this.airport = airport;
 		this.city = city;
 		this.state = state;
 		this.country = country;
 		this.latitude = latitude;
 		this.longitude = longitude;
+		this.timeZone = timeZone;
 	}
 
-	public String getId() {
+	public int getId() {
 		return id;
 	}
 
-	public void setId(String id) {
+	public void setId(int id) {
 		this.id = id;
 	}
 
-	public String getName() {
-		return name;
+	public String getCode() {
+		return code;
 	}
 
-	public void setName(String name) {
-		this.name = name;
+	public void setCode(String code) {
+		this.code = code;
+	}
+
+	public String getAirport() {
+		return airport;
+	}
+
+	public void setAirport(String airport) {
+		this.airport = airport;
 	}
 
 	public String getCity() {
@@ -77,14 +90,44 @@ public class Airport {
 		this.longitude = longitude;
 	}
 
+	public double getTimeZone() {
+		return timeZone;
+	}
+
+	public void setTimeZone(double timeZone) {
+		this.timeZone = timeZone;
+	}
+
+
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + id;
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		Airport other = (Airport) obj;
+		if (id != other.id)
+			return false;
+		return true;
+	}
+
 	@Override
 	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		builder.append("Airport [name=");
-		builder.append(name);
-		builder.append("]");
-		return builder.toString();
+		return "Airport [id=" + id + ", airport=" + airport + "]";
 	}
+	
+
 	
 }
 
